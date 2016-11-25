@@ -59,11 +59,13 @@ RUN git clone https://github.com/facebook/osquery.git
 
 WORKDIR $WORKING_DIRECTORY/osquery/
 
-# Hack to make the make deps script not try to fetch packages that don't exist on lucid
-# git is not available on the "old releases" apt repository, but git-core is, and it sufficient
-# autopoint is not available on the "old releases" apt repository, but it does come bundled up inside of an older gettext package
-RUN sed -i 's/package git$/package git-core/g' ./tools/provision/ubuntu.sh
-RUN sed -i 's/package autopoint$/package gettext/g' ./tools/provision/ubuntu.sh
+# distro_main is a function called during `make deps` which goes and installs a few "requirements" using apt-get install
+# A few of the packages didn't exist in the ubuntu.com/old-releases.ubuntu.com package archive (git and autopoint), however
+# their functionalities are available through two other packages:
+#  git is not available on the "old releases" apt repository, but git-core is, and it sufficient
+#  autopoint is not available on the "old releases" apt repository, but it does come bundled up inside of an older gettext package
+# The distro_main function call is optional, so we can skip it by setting this flag
+ENV SKIP_DISTRO_MAIN=true
 
 RUN make deps
 RUN make
