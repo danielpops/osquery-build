@@ -1,2 +1,2 @@
-# osquery-lucid-build
-A docker image that enables osquery to build on linux
+# osquery-build
+A set of docker images for multiple linux distros that set up a build environment for osquery
