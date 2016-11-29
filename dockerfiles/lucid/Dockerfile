@@ -50,14 +50,14 @@ RUN tar -xvf Python-2.7.9.tar.xz \
     && make \
     && make install
 
-# Run as root
-USER root
+RUN localedef -i en_US -f UTF-8 en_US.UTF-8
 
-WORKDIR $WORKING_DIRECTORY
+RUN git clone https://github.com/facebook/osquery.git /osquery/osquery
+RUN chown nobody:nogroup -R /osquery
 
-RUN git clone https://github.com/facebook/osquery.git
+WORKDIR /osquery/osquery
 
-WORKDIR $WORKING_DIRECTORY/osquery/
+USER nobody
 
 # distro_main is a function called during `make deps` which goes and installs a few "requirements" using apt-get install
 # A few of the packages didn't exist in the ubuntu.com/old-releases.ubuntu.com package archive (git and autopoint), however
@@ -70,11 +70,6 @@ ENV SKIP_DISTRO_MAIN=true
 RUN make deps
 RUN make
 
-# Hack to fix the packaging script:
-#  Use whichever fpm is found in the path
-#  Make sure a file actually exists before calling realpath
-RUN sed -i 's/FPM=.*$/FPM="fpm"/g' ./tools/deployment/make_linux_package.sh
-RUN sed -i 's/^\(\s*\)\(.*\)`realpath\s\(.*\)`/\1touch \3\n\1\2`realpath \3`/g' ./tools/deployment/make_linux_package.sh
 RUN make packages
 
 ENTRYPOINT ["/bin/bash"]
