@@ -50,14 +50,17 @@ RUN tar -xvf Python-2.7.9.tar.xz \
     && make \
     && make install
 
-RUN localedef -i en_US -f UTF-8 en_US.UTF-8
-
 RUN git clone https://github.com/facebook/osquery.git /osquery/osquery
 RUN chown nobody:nogroup -R /osquery
 
 WORKDIR /osquery/osquery
+# Give nobody passwordless sudo so that it can run brew-install commands
+RUN echo "nobody ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/nobody
+RUN chmod 0440 /etc/sudoers.d/nobody
 
-USER nobody
+RUN mkdir -p /usr/local/osquery/ && chown nobody:nogroup -R /usr/local/osquery/
+RUN mkdir -p /.cache && chown nobody:nogroup -R /.cache
+RUN mkdir -p /nonexistent && chown nobody:nogroup -R /nonexistent
 
 # distro_main is a function called during `make deps` which goes and installs a few "requirements" using apt-get install
 # A few of the packages didn't exist in the ubuntu.com/old-releases.ubuntu.com package archive (git and autopoint), however
@@ -67,7 +70,11 @@ USER nobody
 # The distro_main function call is optional, so we can skip it by setting this flag
 ENV SKIP_DISTRO_MAIN=true
 
+# Run as nobody for `make deps`, since it uses linuxbrew and forbids running as root
+USER nobody
+
 RUN make deps
+USER root
 RUN make
 
 RUN make packages

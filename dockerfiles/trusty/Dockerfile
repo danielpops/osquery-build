@@ -22,31 +22,39 @@ RUN apt-get update \
         python-dev \
         python2.7 \
         openssl \
+        ruby1.9.1-dev \
         realpath \
         vim \
         wget \
         zlib1g-dev \
     && apt-get clean
 
-RUN localedef -i en_US -f UTF-8 en_US.UTF-8
+RUN gem install fpm
 
 RUN git config --global http.sslVerify false
 RUN git clone https://github.com/facebook/osquery.git /osquery/osquery
 RUN chown nobody:nogroup -R /osquery
 
 WORKDIR /osquery/osquery
+# Give nobody passwordless sudo so that it can run brew-install commands
+RUN echo "nobody ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/nobody
+RUN chmod 0440 /etc/sudoers.d/nobody
+
+RUN mkdir -p /usr/local/osquery/
+RUN chown nobody:nogroup -R /usr/local/osquery/
+
+# This is needed for the git config --global call below
+RUN mkdir -p /nonexistent
+RUN chown nobody:nogroup -R /nonexistent
 
 USER nobody
+# Needed because something something ssl
+RUN git config --global http.sslVerify false
 
 ENV SKIP_DISTRO_MAIN=true
 RUN make deps
 RUN make
 
-# Hack to fix the packaging script:
-#  Use whichever fpm is found in the path
-#  Make sure a file actually exists before calling realpath
-RUN sed -i 's/FPM=.*$/FPM="fpm"/g' ./tools/deployment/make_linux_package.sh
-RUN sed -i 's/^\(\s*\)\(.*\)`realpath\s\(.*\)`/\1touch \3\n\1\2`realpath \3`/g' ./tools/deployment/make_linux_package.sh
 RUN make packages
 
 ENTRYPOINT ["/bin/bash"]
